@@ -210,6 +210,26 @@
   }
   .empty-state { padding: 32px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
   .empty-state i { font-size: 32px; display: block; margin-bottom: 8px; }
+  /* ── File drop zone (inside modal) ── */
+  .file-drop {
+    border: 1.5px dashed var(--border-md); border-radius: var(--radius-md);
+    padding: 20px 16px; text-align: center; cursor: pointer;
+    background: var(--bg-secondary); transition: all .15s; position: relative;
+  }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--accent); background: var(--accent-light); }
+  .file-drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .file-drop i { font-size: 24px; color: var(--text-tertiary); display: block; margin-bottom: 6px; }
+  .file-drop p { font-size: 13px; color: var(--text-secondary); }
+  .file-drop span { font-size: 11px; color: var(--text-tertiary); }
+  .file-chosen { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-md); font-size: 12px; color: var(--text-primary); }
+  .file-chosen i { font-size: 16px; color: var(--accent); flex-shrink: 0; }
+  .file-chosen .fc-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-chosen .fc-size { color: var(--text-tertiary); white-space: nowrap; }
+  .file-chosen .fc-remove { cursor: pointer; color: var(--text-tertiary); flex-shrink: 0; font-size: 15px; }
+  .file-chosen .fc-remove:hover { color: #A32D2D; }
+  .has-file { border-color: var(--accent); background: var(--accent-light); }
+  /* download button active */
+  .icon-btn.has-dl { color: var(--accent-dark); border-color: var(--accent); }
   .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
   .filter-row input, .filter-row select { padding: 6px 10px; border: 0.5px solid var(--border-md); border-radius: var(--radius-md); font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); }
   .filter-row input:focus, .filter-row select:focus { outline: none; border-color: var(--accent); }
@@ -392,6 +412,21 @@
     <div class="form-group">
       <label class="form-label">Description / Notes</label>
       <textarea class="form-textarea" id="m-notes" placeholder="Brief description of the document..." style="min-height:58px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Attach File <span style="color:var(--text-tertiary);font-weight:400">(optional — stored locally in your browser)</span></label>
+      <div class="file-drop" id="file-drop-zone">
+        <input type="file" id="m-file" accept=".pdf,.dwg,.dxf,.rvt,.nwd,.nwc,.jpg,.jpeg,.png,.docx,.doc,.xlsx,.xls,.zip,.rar" onchange="handleFileSelect(this.files[0])" />
+        <i class="ti ti-cloud-upload"></i>
+        <p>Click or drag &amp; drop a file here</p>
+        <span>PDF, DWG, DXF, RVT, NWD, NWC, JPG, PNG, DOCX, XLSX, ZIP</span>
+      </div>
+      <div id="file-chosen-preview" style="display:none" class="file-chosen">
+        <i class="ti ti-file"></i>
+        <span class="fc-name" id="fc-name"></span>
+        <span class="fc-size" id="fc-size"></span>
+        <i class="ti ti-x fc-remove" onclick="clearFile()" title="Remove file"></i>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('upload-modal')">Cancel</button>
@@ -579,7 +614,7 @@ function docRows(data, compact) {
         '<button class="icon-btn reject"  title="Reject"  onclick="setStatus('+d.id+',\'rejected\')"><i class="ti ti-x"></i></button>'+
         '<button class="icon-btn comment-btn" title="Add comment" onclick="openCommentModal('+d.id+')"><i class="ti ti-message-circle"></i></button>'+
         '<button class="icon-btn" title="Add to punch list" onclick="openPunchForDoc('+d.id+')"><i class="ti ti-alert-triangle"></i></button>'+
-        '<button class="icon-btn" title="Download / open" onclick="dlDoc('+d.id+')"><i class="ti ti-download"></i></button>'+
+        '<button class="icon-btn'+(d.fileData?' has-dl':'')+'" title="'+(d.fileData?'Download file':'No file attached')+'" onclick="dlDoc('+d.id+')"><i class="ti ti-download"></i></button>'+
         '<button class="icon-btn" style="color:var(--text-tertiary)" title="Delete" onclick="deleteDoc('+d.id+')"><i class="ti ti-trash"></i></button>'+
       '</div></td>'+
     '</tr>';
@@ -703,7 +738,16 @@ function deleteDoc(id) {
 
 function dlDoc(id) {
   var d = STORE.docs.find(function(x){ return x.id===id; });
-  toast('📥 "' + d.name + '" — attach a real file URL to enable download.');
+  if (!d.fileData) {
+    toast('No file attached to this document.'); return;
+  }
+  var a = document.createElement('a');
+  a.href = d.fileData;
+  a.download = d.fileName || d.name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('Downloading: ' + (d.fileName || d.name));
 }
 
 function closePunch(id) {
@@ -749,11 +793,14 @@ function submitDoc() {
     status: 'pending',
     reviewer: document.getElementById('m-reviewer').value.trim(),
     notes: document.getElementById('m-notes').value.trim(),
-    date: today()
+    date: today(),
+    fileData: pendingFileData || null,
+    fileName: pendingFileName || null
   });
   saveStore();
   closeModal('upload-modal');
   ['m-name','m-rev','m-docno','m-reviewer','m-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  clearFile();
   renderAll(); toast('Document uploaded successfully.');
 }
 
@@ -817,6 +864,75 @@ function addComment() {
 document.querySelectorAll('.modal-bg').forEach(function(bg){
   bg.addEventListener('click', function(e){ if (e.target===bg) bg.classList.remove('open'); });
 });
+
+// ── File attachment ───────────────────────────────────────────────────────────
+var pendingFileData = null;
+var pendingFileName = null;
+
+var EXT_TYPE = {
+  pdf:'pdf', dwg:'dwg', dxf:'dwg', rvt:'rvt', rfa:'rvt',
+  nwd:'nwd', nwc:'nwd', nwf:'nwd',
+  jpg:'img', jpeg:'img', png:'img', bmp:'img', tif:'img', tiff:'img',
+  doc:'doc', docx:'doc',
+  xls:'xls', xlsx:'xls',
+  zip:'doc', rar:'doc'
+};
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return Math.round(b/1024) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function applyFile(file) {
+  if (!file) return;
+  // Warn if very large (>25MB localStorage may struggle)
+  if (file.size > 25 * 1024 * 1024) {
+    if (!confirm('This file is ' + formatBytes(file.size) + '. Large files may exceed browser storage limits. Continue?')) return;
+  }
+  var ext = file.name.split('.').pop().toLowerCase();
+  var detectedType = EXT_TYPE[ext] || 'doc';
+  document.getElementById('m-type').value = detectedType;
+  // Auto-fill name if empty
+  if (!document.getElementById('m-name').value.trim()) {
+    document.getElementById('m-name').value = file.name.replace(/\.[^.]+$/, '');
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    pendingFileData = e.target.result;
+    pendingFileName = file.name;
+    // Show preview
+    document.getElementById('fc-name').textContent = file.name;
+    document.getElementById('fc-size').textContent = formatBytes(file.size);
+    document.getElementById('file-chosen-preview').style.display = 'flex';
+    document.getElementById('file-drop-zone').classList.add('has-file');
+  };
+  reader.onerror = function() { toast('Could not read file. Please try again.'); };
+  reader.readAsDataURL(file);
+}
+
+function handleFileSelect(file) { applyFile(file); }
+
+function clearFile() {
+  pendingFileData = null;
+  pendingFileName = null;
+  document.getElementById('m-file').value = '';
+  document.getElementById('file-chosen-preview').style.display = 'none';
+  document.getElementById('file-drop-zone').classList.remove('has-file');
+}
+
+// Drag-and-drop on the drop zone
+(function() {
+  var zone = document.getElementById('file-drop-zone');
+  zone.addEventListener('dragover',  function(e){ e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function()  { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files[0]) applyFile(files[0]);
+  });
+})();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadStore();
