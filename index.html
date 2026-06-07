@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HydroDocs — Hydropower Document Review Platform</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede9;
+    --text-primary: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.22);
+    --accent: #1D9E75;
+    --accent-dark: #0F6E56;
+    --accent-light: #E1F5EE;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #272725;
+      --bg-tertiary: #111110;
+      --text-primary: #e8e7e2;
+      --text-secondary: #a0a09a;
+      --text-tertiary: #666662;
+      --border: rgba(255,255,255,0.1);
+      --border-md: rgba(255,255,255,0.2);
+      --accent-light: #0d3d2c;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; }
+  /* ── Layout ── */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    background: var(--bg-primary);
+    border-bottom: 0.5px solid var(--border);
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; gap: 12px; flex-wrap: wrap;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 34px; height: 34px; border-radius: var(--radius-md);
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; flex-shrink: 0;
+  }
+  .logo-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .logo-sub { font-size: 11px; color: var(--text-secondary); }
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .main { display: flex; flex: 1; overflow: hidden; }
+  .sidebar {
+    width: 210px; min-width: 210px; background: var(--bg-primary);
+    border-right: 0.5px solid var(--border); overflow-y: auto; flex-shrink: 0;
+  }
+  .content { flex: 1; overflow-y: auto; padding: 20px; }
+  /* ── Sidebar nav ── */
+  .nav-label { font-size: 10px; color: var(--text-tertiary); padding: 14px 16px 4px; text-transform: uppercase; letter-spacing: .06em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px; padding: 8px 16px;
+    font-size: 13px; color: var(--text-secondary); cursor: pointer;
+    border-left: 2px solid transparent; transition: all .12s;
+  }
+  .nav-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .nav-item.active { color: var(--accent-dark); border-left-color: var(--accent); background: var(--accent-light); font-weight: 500; }
+  .nav-item i { font-size: 16px; flex-shrink: 0; }
+  /* ── Badges ── */
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .badge-pending  { background: #FAEEDA; color: #854F0B; }
+  .badge-review   { background: #E6F1FB; color: #185FA5; }
+  .badge-approved { background: #EAF3DE; color: #3B6D11; }
+  .badge-rejected { background: #FCEBEB; color: #A32D2D; }
+  .badge-punch    { background: #FBEAF0; color: #993556; }
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px;
+    font-size: 13px; border: 0.5px solid var(--border-md); border-radius: var(--radius-md);
+    background: var(--bg-primary); color: var(--text-primary); cursor: pointer;
+    font-family: var(--font); transition: background .13s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg-secondary); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-dark); }
+  .btn.danger-btn { background: #FCEBEB; border-color: #F09595; color: #A32D2D; }
+  .btn.danger-btn:hover { background: #F7C1C1; }
+  .icon-btn {
+    width: 29px; height: 29px; border-radius: var(--radius-sm); border: 0.5px solid var(--border);
+    background: transparent; display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-secondary); font-size: 15px; transition: all .13s;
+  }
+  .icon-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .icon-btn.approve:hover { background: #EAF3DE; color: #3B6D11; border-color: #97C459; }
+  .icon-btn.reject:hover  { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
+  .icon-btn.comment-btn:hover { background: #E6F1FB; color: #185FA5; border-color: #85B7EB; }
+  /* ── Stat cards ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 13px 15px; }
+  .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 600; color: var(--text-primary); }
+  .stat-value.green { color: #0F6E56; }
+  .stat-value.amber { color: #BA7517; }
+  .stat-value.red   { color: #A32D2D; }
+  .stat-value.blue  { color: #185FA5; }
+  /* ── Tables ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+  .section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .table-wrap { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 9px 14px; text-align: left; color: var(--text-secondary); font-weight: 500; font-size: 12px; background: var(--bg-secondary); border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; border-bottom: 0.5px solid var(--border); color: var(--text-primary); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-secondary); }
+  .doc-name { font-weight: 500; font-size: 13px; }
+  .doc-disc { font-size: 11px; color: var(--text-secondary); }
+  .actions { display: flex; gap: 4px; }
+  /* ── File type tags ── */
+  .file-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; text-transform: uppercase; display: inline-block; }
+  .ft-pdf { background: #FAECE7; color: #993C1D; }
+  .ft-dwg { background: #E6F1FB; color: #185FA5; }
+  .ft-img { background: #FAEEDA; color: #854F0B; }
+  .ft-doc { background: #EAF3DE; color: #3B6D11; }
+  .ft-rvt { background: #EEEDFE; color: #534AB7; }
+  .ft-xls { background: #E1F5EE; color: #0F6E56; }
+  .ft-nwd { background: #FBEAF0; color: #993556; }
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 1.5px dashed var(--border-md); border-radius: var(--radius-lg);
+    padding: 28px; text-align: center; background: var(--bg-primary);
+    margin-bottom: 20px; cursor: pointer; transition: all .15s;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .upload-zone .uz-icon { font-size: 30px; color: var(--text-tertiary); display: block; margin-bottom: 8px; }
+  .upload-zone p { font-size: 13px; color: var(--text-secondary); }
+  .upload-zone span { font-size: 11px; color: var(--text-tertiary); }
+  /* ── Punch list ── */
+  .punch-item { display: flex; align-items: flex-start; gap: 11px; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+  .punch-item:last-child { border-bottom: none; }
+  .punch-num { min-width: 26px; height: 26px; border-radius: 50%; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .sev-high   { background: #FCEBEB; color: #A32D2D; }
+  .sev-medium { background: #FAEEDA; color: #854F0B; }
+  .sev-low    { background: #EAF3DE; color: #3B6D11; }
+  .punch-body { flex: 1; }
+  .punch-issue { font-weight: 500; font-size: 13px; color: var(--text-primary); }
+  .punch-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  /* ── Comments ── */
+  .comment-item { padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+  .comment-item:last-child { border-bottom: none; }
+  .comment-meta { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .comment-text { font-size: 13px; color: var(--text-primary); line-height: 1.55; }
+  .comment-form { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 16px; }
+  /* ── Forms ── */
+  .form-group { margin-bottom: 13px; }
+  .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 7px 10px; border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md); font-size: 13px; background: var(--bg-primary);
+    color: var(--text-primary); font-family: var(--font); transition: border-color .13s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  /* ── Modal ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 200; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--bg-primary); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); padding: 22px; width: 460px; max-width: 100%;
+    max-height: 90vh; overflow-y: auto; position: relative;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+  /* ── Detail panel ── */
+  .detail-panel { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 18px; margin-bottom: 16px; }
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .detail-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .detail-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .meta-item { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 9px 12px; }
+  .meta-item-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .meta-item-value { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; border-bottom: 0.5px solid var(--border); margin-bottom: 18px; }
+  .tab { padding: 9px 16px; font-size: 13px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; transition: all .12s; }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: 500; }
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--text-primary); color: var(--bg-primary);
+    padding: 10px 18px; border-radius: var(--radius-md); font-size: 13px; z-index: 999;
+    opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .sidebar { display: none; }
+    .content { padding: 12px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    th:nth-child(4), td:nth-child(4),
+    th:nth-child(6), td:nth-child(6) { display: none; }
+  }
+  .empty-state { padding: 32px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+  .empty-state i { font-size: 32px; display: block; margin-bottom: 8px; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-row input, .filter-row select { padding: 6px 10px; border: 0.5px solid var(--border-md); border-radius: var(--radius-md); font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); }
+  .filter-row input:focus, .filter-row select:focus { outline: none; border-color: var(--accent); }
+  .rev-chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-droplet"></i></div>
+      <div>
+        <div class="logo-name">HydroDocs</div>
+        <div class="logo-sub">Hydropower Plant — Document Review Platform</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="badge badge-pending" id="badge-pending">0 Pending</span>
+      <span class="badge badge-review"  id="badge-review">0 In Review</span>
+      <span class="badge badge-approved" id="badge-approved">0 Approved</span>
+      <span class="badge badge-rejected" id="badge-rejected">0 Rejected</span>
+      <button class="btn primary" onclick="openUploadModal()"><i class="ti ti-upload"></i> Upload Document</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="nav-label">Views</div>
+      <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="nav-item" data-tab="documents" onclick="switchTab('documents',this)"><i class="ti ti-files"></i> All Documents</div>
+      <div class="nav-item" data-tab="punch" onclick="switchTab('punch',this)"><i class="ti ti-alert-triangle"></i> Punch List</div>
+      <div class="nav-item" data-tab="comments" onclick="switchTab('comments',this)"><i class="ti ti-message-circle"></i> Comments</div>
+      <div class="nav-label">Categories</div>
+      <div class="nav-item" data-tab="documents" data-cat="Turbine" onclick="filterByCat('Turbine',this)"><i class="ti ti-engine"></i> Turbines</div>
+      <div class="nav-item" data-tab="documents" data-cat="Gate" onclick="filterByCat('Gate',this)"><i class="ti ti-adjustments"></i> Gates &amp; Valves</div>
+      <div class="nav-item" data-tab="documents" data-cat="Penstock" onclick="filterByCat('Penstock',this)"><i class="ti ti-wave-sine"></i> Penstocks</div>
+      <div class="nav-item" data-tab="documents" data-cat="Crane" onclick="filterByCat('Crane',this)"><i class="ti ti-crane"></i> Cranes &amp; Hoists</div>
+      <div class="nav-item" data-tab="documents" data-cat="Civil" onclick="filterByCat('Civil',this)"><i class="ti ti-building"></i> Civil / Structural</div>
+      <div class="nav-item" data-tab="documents" data-cat="Electrical" onclick="filterByCat('Electrical',this)"><i class="ti ti-bolt"></i> Electrical</div>
+    </div>
+
+    <!-- Main content -->
+    <div class="content" id="main-content">
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard">
+        <div class="stats-row" id="stat-row"></div>
+        <div class="section-header">
+          <div class="section-title">Recent Documents</div>
+          <button class="btn" onclick="switchTab('documents', document.querySelector('[data-tab=documents]'))"><i class="ti ti-arrow-right"></i> View all</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Type</th><th>Discipline</th><th>Status</th><th>Reviewer</th><th>Actions</th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
+
+        <div class="section-header" style="margin-top:20px"><div class="section-title">Open Punch Items</div></div>
+        <div class="table-wrap" style="padding:0 16px"><div id="dash-punch"></div></div>
+      </div>
+
+      <!-- ALL DOCUMENTS -->
+      <div id="tab-documents" style="display:none">
+        <div class="section-header">
+          <div class="section-title" id="docs-title">All Documents</div>
+          <button class="btn primary" onclick="openUploadModal()"><i class="ti ti-plus"></i> Upload</button>
+        </div>
+        <div class="upload-zone" onclick="openUploadModal()">
+          <i class="ti ti-cloud-upload uz-icon"></i>
+          <p>Click to upload a document or drawing</p>
+          <span>Supported: PDF, DWG, DXF, RVT, NWD, NWC, JPG, PNG, DOCX, XLSX</span>
+        </div>
+        <div class="filter-row">
+          <input type="search" id="doc-search" placeholder="&#xe1e6; Search documents..." oninput="renderDocs()" />
+          <select id="doc-filter-status" onchange="renderDocs()">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="review">In Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select id="doc-filter-disc" onchange="renderDocs()">
+            <option value="">All disciplines</option>
+            <option>Mechanical</option>
+            <option>Hydromechanical</option>
+            <option>Civil</option>
+            <option>Electrical</option>
+            <option>Structural</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Type</th><th>Rev</th><th>Discipline</th><th>Status</th><th>Reviewer</th><th>Date</th><th>Actions</th></tr></thead><tbody id="docs-tbody"></tbody></table></div>
+      </div>
+
+      <!-- PUNCH LIST -->
+      <div id="tab-punch" style="display:none">
+        <div class="section-header">
+          <div class="section-title">Punch List</div>
+          <button class="btn primary" onclick="openPunchModal()"><i class="ti ti-plus"></i> Add Item</button>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Open Items</div><div class="stat-value red" id="punch-open-count">0</div></div>
+          <div class="stat-card"><div class="stat-label">High Severity</div><div class="stat-value red" id="punch-high-count">0</div></div>
+          <div class="stat-card"><div class="stat-label">Medium Severity</div><div class="stat-value amber" id="punch-med-count">0</div></div>
+          <div class="stat-card"><div class="stat-label">Closed Items</div><div class="stat-value green" id="punch-closed-count">0</div></div>
+        </div>
+        <div class="table-wrap" style="padding:0 16px"><div id="punch-list-full"></div></div>
+      </div>
+
+      <!-- COMMENTS -->
+      <div id="tab-comments" style="display:none">
+        <div class="section-header"><div class="section-title">Review Comments</div></div>
+        <div class="table-wrap" style="padding:0 16px;margin-bottom:16px"><div id="all-comments-list"></div></div>
+        <div class="comment-form">
+          <div class="section-title" style="margin-bottom:14px"><i class="ti ti-message-plus" style="margin-right:6px;vertical-align:-2px"></i>Post a Comment</div>
+          <div class="form-group">
+            <label class="form-label">Document</label>
+            <select class="form-select" id="cmt-doc-sel"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reviewer Name</label>
+            <input class="form-input" id="cmt-author" placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Comment</label>
+            <textarea class="form-textarea" id="cmt-text" placeholder="Enter review comment, observation, or question..."></textarea>
+          </div>
+          <button class="btn primary" onclick="addComment()"><i class="ti ti-send"></i> Post Comment</button>
+        </div>
+      </div>
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── Upload Modal ── -->
+<div class="modal-bg" id="upload-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-upload"></i> Upload Document / Drawing</div>
+    <div class="form-group">
+      <label class="form-label">Document / Drawing Title *</label>
+      <input class="form-input" id="m-name" placeholder="e.g. Turbine Runner Assembly Drawing Rev.B" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Category *</label>
+        <select class="form-select" id="m-cat">
+          <option>Turbine</option><option>Gate</option><option>Penstock</option>
+          <option>Crane</option><option>Civil</option><option>Electrical</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">File Type *</label>
+        <select class="form-select" id="m-type">
+          <option value="pdf">PDF Drawing / Spec</option>
+          <option value="dwg">DWG / DXF (CAD Drawing)</option>
+          <option value="rvt">RVT (Revit Model)</option>
+          <option value="nwd">NWD / NWC (Navisworks)</option>
+          <option value="img">JPG / PNG Image</option>
+          <option value="doc">DOCX (Word Document)</option>
+          <option value="xls">XLSX (Excel Spreadsheet)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Discipline *</label>
+        <select class="form-select" id="m-disc">
+          <option>Mechanical</option><option>Hydromechanical</option>
+          <option>Civil</option><option>Electrical</option><option>Structural</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Revision</label>
+        <input class="form-input" id="m-rev" placeholder="e.g. A, B, 01, 02" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Document Number</label>
+        <input class="form-input" id="m-docno" placeholder="e.g. HP-MEC-001" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assigned Reviewer</label>
+        <input class="form-input" id="m-reviewer" placeholder="Reviewer name" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description / Notes</label>
+      <textarea class="form-textarea" id="m-notes" placeholder="Brief description of the document..." style="min-height:58px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('upload-modal')">Cancel</button>
+      <button class="btn primary" onclick="submitDoc()"><i class="ti ti-check"></i> Add Document</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Punch Modal ── -->
+<div class="modal-bg" id="punch-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-alert-triangle"></i> Add Punch List Item</div>
+    <div class="form-group">
+      <label class="form-label">Related Document</label>
+      <select class="form-select" id="p-doc"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Issue Description *</label>
+      <textarea class="form-textarea" id="p-issue" placeholder="Describe the issue found in the document..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Severity</label>
+        <select class="form-select" id="p-sev">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Raised By</label>
+        <input class="form-input" id="p-author" placeholder="Your name" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('punch-modal')">Cancel</button>
+      <button class="btn primary" onclick="submitPunch()"><i class="ti ti-plus"></i> Add to Punch List</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Comment Modal (quick) ── -->
+<div class="modal-bg" id="comment-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-message-circle"></i> Add Comment</div>
+    <input type="hidden" id="cm-doc-id" />
+    <div class="form-group">
+      <label class="form-label">Document</label>
+      <input class="form-input" id="cm-doc-name" readonly style="background:var(--bg-secondary)" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reviewer Name</label>
+      <input class="form-input" id="cm-author" placeholder="Your name" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comment</label>
+      <textarea class="form-textarea" id="cm-text" placeholder="Review comment, issue, or question..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('comment-modal')">Cancel</button>
+      <button class="btn primary" onclick="submitComment()"><i class="ti ti-send"></i> Post Comment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Data store (localStorage) ────────────────────────────────────────────────
+var STORE = {
+  docs: [],
+  punches: [],
+  comments: []
+};
+
+function loadStore() {
+  try {
+    var s = localStorage.getItem('hydrodocs_v2');
+    if (s) STORE = JSON.parse(s);
+  } catch(e) {}
+  if (!STORE.docs || !STORE.docs.length) seedData();
+}
+
+function saveStore() {
+  try { localStorage.setItem('hydrodocs_v2', JSON.stringify(STORE)); } catch(e) {}
+}
+
+function seedData() {
+  STORE.docs = [
+    {id:1,name:"Turbine Runner Assembly Drawing",cat:"Turbine",type:"pdf",disc:"Hydromechanical",rev:"B",docno:"HP-HM-001",status:"approved",reviewer:"J. Santos",notes:"Complete runner assembly with balancing tolerances.",date:"2025-05-10"},
+    {id:2,name:"Penstock Welding Procedure Specification",cat:"Penstock",type:"pdf",disc:"Mechanical",rev:"01",docno:"HP-MEC-015",status:"review",reviewer:"M. Ali",notes:"WPS per AWS D1.1.",date:"2025-05-12"},
+    {id:3,name:"Radial Gate Hoist Layout Drawing",cat:"Gate",type:"dwg",disc:"Hydromechanical",rev:"A",docno:"HP-HM-022",status:"pending",reviewer:"",notes:"",date:"2025-05-14"},
+    {id:4,name:"Generator Pit Formwork Drawing",cat:"Civil",type:"dwg",disc:"Civil",rev:"03",docno:"HP-CIV-007",status:"rejected",reviewer:"T. Kim",notes:"Check anchor bolt layout.",date:"2025-05-08"},
+    {id:5,name:"Gantry Crane Load Calculation",cat:"Crane",type:"xls",disc:"Mechanical",rev:"A",docno:"HP-MEC-031",status:"approved",reviewer:"J. Santos",notes:"",date:"2025-05-09"},
+    {id:6,name:"Intake Trash Rack Assembly Drawing",cat:"Gate",type:"pdf",disc:"Hydromechanical",rev:"02",docno:"HP-HM-018",status:"review",reviewer:"M. Ali",notes:"",date:"2025-05-15"},
+    {id:7,name:"Turbine Pit 3D Coordination Model",cat:"Turbine",type:"rvt",disc:"Mechanical",rev:"B",docno:"HP-MEC-002",status:"pending",reviewer:"",notes:"",date:"2025-05-16"},
+    {id:8,name:"Spiral Casing Detail Drawing",cat:"Turbine",type:"dwg",disc:"Hydromechanical",rev:"C",docno:"HP-HM-003",status:"approved",reviewer:"T. Kim",notes:"",date:"2025-05-07"},
+    {id:9,name:"Powerhouse Navisworks Clash Report",cat:"Civil",type:"nwd",disc:"Mechanical",rev:"01",docno:"HP-CIV-012",status:"review",reviewer:"J. Santos",notes:"Clash detection run #3.",date:"2025-05-17"},
+    {id:10,name:"Butterfly Valve Assembly Drawing",cat:"Gate",type:"pdf",disc:"Hydromechanical",rev:"A",docno:"HP-HM-044",status:"pending",reviewer:"",notes:"",date:"2025-05-18"},
+  ];
+  STORE.punches = [
+    {id:1,docId:4,doc:"Generator Pit Formwork Drawing",issue:"Anchor bolt positions do not match turbine manufacturer's baseplate drawing — offset by 40mm in X direction.",severity:"high",author:"T. Kim",status:"open",date:"2025-05-08"},
+    {id:2,docId:2,doc:"Penstock Welding Procedure Specification",issue:"Wall thickness tolerance reference to DIN 2470 instead of specified EN 10208-2. Update standard reference throughout.",severity:"medium",author:"M. Ali",status:"open",date:"2025-05-12"},
+    {id:3,docId:3,doc:"Radial Gate Hoist Layout Drawing",issue:"Safety factor for wire rope selection not stated. Must comply with ISO 4308 minimum SF = 5.",severity:"medium",author:"J. Santos",status:"open",date:"2025-05-14"},
+  ];
+  STORE.comments = [
+    {id:1,docId:2,doc:"Penstock Welding Procedure Specification",author:"M. Ali",text:"Check wall thickness tolerances against EN 1090 and confirm PWHT requirements for P91 material.",date:"2025-05-12"},
+    {id:2,docId:4,doc:"Generator Pit Formwork Drawing",author:"T. Kim",text:"Anchor bolt positions do not match turbine manufacturer baseplate drawing. Coordinate with turbine supplier before next revision.",date:"2025-05-08"},
+    {id:3,docId:1,doc:"Turbine Runner Assembly Drawing",author:"J. Santos",text:"Approved. Balancing grades meet ISO 1940 G2.5. Good work.",date:"2025-05-10"},
+  ];
+  saveStore();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+var activeTab = 'dashboard';
+var activeFilter = '';
+
+function typeTag(t) {
+  var map = {pdf:'ft-pdf',dwg:'ft-dwg',img:'ft-img',doc:'ft-doc',rvt:'ft-rvt',xls:'ft-xls',nwd:'ft-nwd'};
+  var labels = {pdf:'PDF',dwg:'DWG',img:'IMG',doc:'DOCX',rvt:'RVT',xls:'XLSX',nwd:'NWD'};
+  return '<span class="file-tag '+(map[t]||'ft-doc')+'">'+(labels[t]||t.toUpperCase())+'</span>';
+}
+
+function statusPill(s) {
+  var map = {
+    pending: '<span class="badge badge-pending">Pending</span>',
+    review:  '<span class="badge badge-review">In Review</span>',
+    approved:'<span class="badge badge-approved">Approved</span>',
+    rejected:'<span class="badge badge-rejected">Rejected</span>'
+  };
+  return map[s] || s;
+}
+
+function sevBadge(s) {
+  var cls = s === 'high' ? 'sev-high' : s === 'medium' ? 'sev-medium' : 'sev-low';
+  return '<span class="badge '+ cls +'" style="border-radius:20px">'+s.charAt(0).toUpperCase()+s.slice(1)+'</span>';
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+
+function toast(msg, dur) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, dur || 2200);
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────────
+function updateBadges() {
+  var counts = {pending:0, review:0, approved:0, rejected:0};
+  STORE.docs.forEach(function(d){ counts[d.status] = (counts[d.status]||0)+1; });
+  document.getElementById('badge-pending').textContent  = counts.pending  + ' Pending';
+  document.getElementById('badge-review').textContent   = counts.review   + ' In Review';
+  document.getElementById('badge-approved').textContent = counts.approved + ' Approved';
+  document.getElementById('badge-rejected').textContent = counts.rejected + ' Rejected';
+}
+
+function renderStats() {
+  var counts = {pending:0, review:0, approved:0, rejected:0};
+  STORE.docs.forEach(function(d){ counts[d.status] = (counts[d.status]||0)+1; });
+  document.getElementById('stat-row').innerHTML =
+    '<div class="stat-card"><div class="stat-label">Total Documents</div><div class="stat-value">'+STORE.docs.length+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value green">'+counts.approved+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">In Review</div><div class="stat-value blue">'+counts.review+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value amber">'+counts.pending+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-value red">'+counts.rejected+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Open Punch Items</div><div class="stat-value red">'+STORE.punches.filter(function(p){return p.status==='open'}).length+'</div></div>';
+}
+
+function docRows(data, compact) {
+  if (!data.length) return '<tr><td colspan="9"><div class="empty-state"><i class="ti ti-files"></i>No documents found.</div></td></tr>';
+  return data.map(function(d){
+    return '<tr>'+
+      '<td><div class="doc-name">'+d.name+'</div>'+(d.docno?'<div class="doc-disc">'+d.docno+'</div>':'')+'</td>'+
+      '<td>'+d.cat+'</td>'+
+      '<td>'+typeTag(d.type)+'</td>'+
+      (compact?'':'<td><span class="rev-chip">'+d.rev+'</span></td>')+
+      '<td>'+d.disc+'</td>'+
+      '<td>'+statusPill(d.status)+'</td>'+
+      '<td style="font-size:12px;white-space:nowrap">'+(d.reviewer||'<span style="color:var(--text-tertiary)">Unassigned</span>')+'</td>'+
+      (compact?'':'<td style="font-size:12px;color:var(--text-secondary);white-space:nowrap">'+d.date+'</td>')+
+      '<td><div class="actions">'+
+        '<button class="icon-btn approve" title="Approve" onclick="setStatus('+d.id+',\'approved\')"><i class="ti ti-check"></i></button>'+
+        '<button class="icon-btn reject"  title="Reject"  onclick="setStatus('+d.id+',\'rejected\')"><i class="ti ti-x"></i></button>'+
+        '<button class="icon-btn comment-btn" title="Add comment" onclick="openCommentModal('+d.id+')"><i class="ti ti-message-circle"></i></button>'+
+        '<button class="icon-btn" title="Add to punch list" onclick="openPunchForDoc('+d.id+')"><i class="ti ti-alert-triangle"></i></button>'+
+        '<button class="icon-btn" title="Download / open" onclick="dlDoc('+d.id+')"><i class="ti ti-download"></i></button>'+
+        '<button class="icon-btn" style="color:var(--text-tertiary)" title="Delete" onclick="deleteDoc('+d.id+')"><i class="ti ti-trash"></i></button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderDashboard() {
+  renderStats();
+  var recent = STORE.docs.slice().sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,6);
+  document.getElementById('dash-tbody').innerHTML = docRows(recent, true);
+  // punch summary
+  var open = STORE.punches.filter(function(p){return p.status==='open'});
+  document.getElementById('dash-punch').innerHTML = open.length
+    ? open.map(function(p){
+        return '<div class="punch-item">'+
+          '<div class="punch-num '+(p.severity==='high'?'sev-high':'sev-medium')+'">#'+p.id+'</div>'+
+          '<div class="punch-body"><div class="punch-issue">'+p.issue+'</div>'+
+          '<div class="punch-meta">'+p.doc+' &nbsp;·&nbsp; '+sevBadge(p.severity)+' &nbsp;·&nbsp; '+p.author+'</div></div>'+
+          '<button class="icon-btn" title="Mark closed" onclick="closePunch('+p.id+')"><i class="ti ti-circle-check"></i></button>'+
+        '</div>';
+      }).join('')
+    : '<div class="empty-state" style="padding:20px"><i class="ti ti-circle-check"></i>No open punch items.</div>';
+}
+
+function renderDocs() {
+  var search = (document.getElementById('doc-search').value||'').toLowerCase();
+  var statF  = document.getElementById('doc-filter-status').value;
+  var discF  = document.getElementById('doc-filter-disc').value;
+  var data = STORE.docs.filter(function(d){
+    if (activeFilter && d.cat !== activeFilter) return false;
+    if (statF && d.status !== statF) return false;
+    if (discF && d.disc !== discF) return false;
+    if (search && d.name.toLowerCase().indexOf(search)<0 && (d.docno||'').toLowerCase().indexOf(search)<0) return false;
+    return true;
+  });
+  document.getElementById('docs-tbody').innerHTML = docRows(data, false);
+}
+
+function renderPunch() {
+  var open   = STORE.punches.filter(function(p){return p.status==='open'});
+  var closed = STORE.punches.filter(function(p){return p.status==='closed'});
+  document.getElementById('punch-open-count').textContent   = open.length;
+  document.getElementById('punch-high-count').textContent   = open.filter(function(p){return p.severity==='high'}).length;
+  document.getElementById('punch-med-count').textContent    = open.filter(function(p){return p.severity==='medium'}).length;
+  document.getElementById('punch-closed-count').textContent = closed.length;
+  document.getElementById('punch-list-full').innerHTML = STORE.punches.length
+    ? STORE.punches.map(function(p){
+        return '<div class="punch-item">'+
+          '<div class="punch-num '+(p.status==='closed'?'sev-low':p.severity==='high'?'sev-high':'sev-medium')+'">#'+p.id+'</div>'+
+          '<div class="punch-body">'+
+            '<div class="punch-issue" style="'+(p.status==='closed'?'text-decoration:line-through;color:var(--text-tertiary)':'')+'">'+p.issue+'</div>'+
+            '<div class="punch-meta">'+p.doc+' &nbsp;·&nbsp; '+sevBadge(p.severity)+' &nbsp;·&nbsp; '+p.author+' &nbsp;·&nbsp; '+p.date+
+            (p.status==='closed'?' &nbsp;<span class="badge badge-approved">Closed</span>':'')+
+            '</div>'+
+          '</div>'+
+          (p.status==='open'?'<button class="icon-btn" title="Mark closed" onclick="closePunch('+p.id+')"><i class="ti ti-circle-check"></i></button>':'')+
+        '</div>';
+      }).join('')
+    : '<div class="empty-state" style="padding:20px"><i class="ti ti-clipboard-list"></i>No punch items yet.</div>';
+}
+
+function renderComments() {
+  var sel = document.getElementById('cmt-doc-sel');
+  sel.innerHTML = STORE.docs.map(function(d){ return '<option value="'+d.id+'">'+d.name+'</option>'; }).join('');
+  document.getElementById('all-comments-list').innerHTML = STORE.comments.length
+    ? STORE.comments.slice().reverse().map(function(c){
+        return '<div class="comment-item">'+
+          '<div class="comment-meta"><strong>'+c.author+'</strong> on <em>'+c.doc+'</em> &nbsp;·&nbsp; '+c.date+'</div>'+
+          '<div class="comment-text">'+c.text+'</div>'+
+        '</div>';
+      }).join('')
+    : '<div class="empty-state" style="padding:20px"><i class="ti ti-message-circle"></i>No comments yet.</div>';
+}
+
+function renderAll() {
+  updateBadges();
+  if (activeTab === 'dashboard') renderDashboard();
+  if (activeTab === 'documents') renderDocs();
+  if (activeTab === 'punch')     renderPunch();
+  if (activeTab === 'comments')  renderComments();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  activeTab = tab;
+  activeFilter = '';
+  document.getElementById('docs-title').textContent = 'All Documents';
+  ['dashboard','documents','punch','comments'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  renderAll();
+}
+
+function filterByCat(cat, el) {
+  activeFilter = cat;
+  activeTab = 'documents';
+  ['dashboard','documents','punch','comments'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display = t==='documents' ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  document.getElementById('docs-title').textContent = cat + ' Documents';
+  renderDocs();
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function setStatus(id, s) {
+  STORE.docs = STORE.docs.map(function(d){ return d.id===id ? Object.assign({},d,{status:s}) : d; });
+  saveStore();
+  renderAll();
+  toast(s === 'approved' ? '✓ Document approved' : '✗ Document rejected');
+}
+
+function deleteDoc(id) {
+  if (!confirm('Delete this document? This cannot be undone.')) return;
+  STORE.docs = STORE.docs.filter(function(d){ return d.id !== id; });
+  saveStore(); renderAll(); toast('Document deleted.');
+}
+
+function dlDoc(id) {
+  var d = STORE.docs.find(function(x){ return x.id===id; });
+  toast('📥 "' + d.name + '" — attach a real file URL to enable download.');
+}
+
+function closePunch(id) {
+  STORE.punches = STORE.punches.map(function(p){ return p.id===id ? Object.assign({},p,{status:'closed'}) : p; });
+  saveStore(); renderAll(); toast('Punch item closed.');
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openUploadModal() { document.getElementById('upload-modal').classList.add('open'); }
+function closeModal(id)    { document.getElementById(id).classList.remove('open'); }
+
+function openPunchModal() {
+  var sel = document.getElementById('p-doc');
+  sel.innerHTML = STORE.docs.map(function(d){ return '<option value="'+d.id+'">'+d.name+'</option>'; }).join('');
+  document.getElementById('punch-modal').classList.add('open');
+}
+
+function openPunchForDoc(docId) {
+  openPunchModal();
+  document.getElementById('p-doc').value = docId;
+}
+
+function openCommentModal(docId) {
+  var d = STORE.docs.find(function(x){ return x.id===docId; });
+  document.getElementById('cm-doc-id').value = docId;
+  document.getElementById('cm-doc-name').value = d.name;
+  document.getElementById('cm-text').value = '';
+  document.getElementById('comment-modal').classList.add('open');
+}
+
+function submitDoc() {
+  var name = document.getElementById('m-name').value.trim();
+  if (!name) { alert('Please enter a document name.'); return; }
+  var newId = STORE.docs.length ? Math.max.apply(null, STORE.docs.map(function(d){return d.id;})) + 1 : 1;
+  STORE.docs.push({
+    id: newId,
+    name: name,
+    cat:  document.getElementById('m-cat').value,
+    type: document.getElementById('m-type').value,
+    disc: document.getElementById('m-disc').value,
+    rev:  document.getElementById('m-rev').value.trim() || 'A',
+    docno:document.getElementById('m-docno').value.trim(),
+    status: 'pending',
+    reviewer: document.getElementById('m-reviewer').value.trim(),
+    notes: document.getElementById('m-notes').value.trim(),
+    date: today()
+  });
+  saveStore();
+  closeModal('upload-modal');
+  ['m-name','m-rev','m-docno','m-reviewer','m-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  renderAll(); toast('Document uploaded successfully.');
+}
+
+function submitPunch() {
+  var issue = document.getElementById('p-issue').value.trim();
+  if (!issue) { alert('Please describe the issue.'); return; }
+  var docId = parseInt(document.getElementById('p-doc').value);
+  var doc   = STORE.docs.find(function(d){ return d.id===docId; });
+  var newId = STORE.punches.length ? Math.max.apply(null, STORE.punches.map(function(p){return p.id;})) + 1 : 1;
+  STORE.punches.push({
+    id: newId,
+    docId: docId,
+    doc:  doc ? doc.name : '',
+    issue: issue,
+    severity: document.getElementById('p-sev').value,
+    author: document.getElementById('p-author').value.trim() || 'Reviewer',
+    status: 'open',
+    date: today()
+  });
+  saveStore();
+  closeModal('punch-modal');
+  document.getElementById('p-issue').value = '';
+  renderAll(); toast('Punch item added.');
+}
+
+function submitComment() {
+  var txt = document.getElementById('cm-text').value.trim();
+  if (!txt) { alert('Please enter a comment.'); return; }
+  var docId = parseInt(document.getElementById('cm-doc-id').value);
+  var doc   = STORE.docs.find(function(d){ return d.id===docId; });
+  var newId = STORE.comments.length ? Math.max.apply(null, STORE.comments.map(function(c){return c.id;})) + 1 : 1;
+  STORE.comments.push({
+    id: newId, docId: docId,
+    doc: doc ? doc.name : '',
+    author: document.getElementById('cm-author').value.trim() || 'Reviewer',
+    text: txt, date: today()
+  });
+  saveStore();
+  closeModal('comment-modal');
+  renderAll(); toast('Comment posted.');
+}
+
+function addComment() {
+  var txt = document.getElementById('cmt-text').value.trim();
+  if (!txt) { alert('Please enter a comment.'); return; }
+  var docId = parseInt(document.getElementById('cmt-doc-sel').value);
+  var doc   = STORE.docs.find(function(d){ return d.id===docId; });
+  var newId = STORE.comments.length ? Math.max.apply(null, STORE.comments.map(function(c){return c.id;})) + 1 : 1;
+  STORE.comments.push({
+    id: newId, docId: docId,
+    doc: doc ? doc.name : '',
+    author: document.getElementById('cmt-author').value.trim() || 'Reviewer',
+    text: txt, date: today()
+  });
+  saveStore();
+  document.getElementById('cmt-text').value = '';
+  renderAll(); toast('Comment posted.');
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-bg').forEach(function(bg){
+  bg.addEventListener('click', function(e){ if (e.target===bg) bg.classList.remove('open'); });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadStore();
+renderAll();
+</script>
+</body>
+</html>
